@@ -1,0 +1,116 @@
+Debuntu (Debian, Ubuntu, and derivatives using apt)
+The Jellyfin team provides 3rd-party Debian and Ubuntu repositories, to help ensure your Jellyfin install is always kept up-to-date.
+
+Repository (Automatic)
+To simplify deployment and help automate this for as many users as possible, we provide a BASH script to handle repo installation as well as installing Jellyfin. All you need to do is run this command on your system (requires curl, or subsitute curl with wget -O-):
+
+curl https://repo.jellyfin.org/install-debuntu.sh | sudo bash
+
+NOTE
+You can verify the script download integrity with (requires sha256sum):
+
+diff <( curl -s https://repo.jellyfin.org/install-debuntu.sh -o install-debuntu.sh; sha256sum install-debuntu.sh ) <( curl -s https://repo.jellyfin.org/install-debuntu.sh.sha256sum )
+
+
+An empty output means everything is correct. Then you can inspect the script to see what it does (optional but recommended) and execute it with:
+
+less install-debuntu.sh
+sudo bash install-debuntu.sh
+
+NOTE
+The script tries to handle as many common derivatives as possible, including, at least, Linux Mint (Ubuntu and Debian editions), Raspbian/Raspberry Pi OS, and KDE Neon. We welcome PRs to the script for any other common derivatives, or you can use the steps below instead.
+
+Repository (Manual)
+If you would prefer to install everything manually, the full steps are as follows:
+
+Install curl and gnupg if you haven't already:
+
+sudo apt install curl gnupg
+
+On Ubuntu (and derivatives) only, enable the Universe repository to obtain all the FFmpeg dependencies:
+
+sudo add-apt-repository universe
+
+NOTE
+If the above command fails you will need to install the following package software-properties-common. This can be achieved with the following command sudo apt-get install software-properties-common
+
+On Debian, you can also enable the non-free components of your base repositories for additional FFmpeg dependencies, but this is optional.
+
+Download the GPG signing key (signed by the Jellyfin Team) and install it:
+
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://repo.jellyfin.org/jellyfin_team.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/jellyfin.gpg
+
+
+Add a repository configuration at /etc/apt/sources.list.d/jellyfin.sources:
+
+export VERSION_OS="$( awk -F'=' '/^ID=/{ print $NF }' /etc/os-release )"
+export VERSION_CODENAME="$( awk -F'=' '/^VERSION_CODENAME=/{ print $NF }' /etc/os-release )"
+export DPKG_ARCHITECTURE="$( dpkg --print-architecture )"
+cat <<EOF | sudo tee /etc/apt/sources.list.d/jellyfin.sources
+Types: deb
+URIs: https://repo.jellyfin.org/${VERSION_OS}
+Suites: ${VERSION_CODENAME}
+Components: main
+Architectures: ${DPKG_ARCHITECTURE}
+Signed-By: /etc/apt/keyrings/jellyfin.gpg
+EOF
+
+NOTE
+The supported values for the above variables are:
+
+${VERSION_OS}: One of debian or ubuntu; if it is not, use the closest one for your distribution.
+${VERSION_CODENAME}: One of our supported Debian or Ubuntu release codenames. These can change as new releases come out and old releases are dropped, so check the script to be sure yours is supported.
+${DPKG_ARCHITECTURE}: One of our supported architectures. Microsoft does not provide a .NET for 32-bit x86 Linux systems, and hence Jellyfin is not supported on the i386 architecture.
+Update your APT repositories:
+
+sudo apt update
+
+Install the Jellyfin metapackage, which will automatically fetch the various sub-packages:
+
+sudo apt install jellyfin
+
+NOTE
+If you want to be explicit, instead of the metapackage, you can install the sub-packages individually:
+
+sudo apt install jellyfin-server jellyfin-web
+
+The jellyfin-server package will automatically select the right jellyfin-ffmpeg package for you as well.
+
+Manage the Jellyfin system service:
+
+sudo systemctl {action} jellyfin
+sudo service jellyfin {action}
+
+.deb Packages (Very Manual)
+Raw .deb packages, including old versions, source packages, and dpkg meta files, are available in the main download repository.
+
+NOTE
+The repository is the preferred way to obtain Jellyfin on Debian and Ubuntu systems, as this ensures you get automatic updates and that all dependencies are properly resolved. Use these steps only if you really know what you're doing.
+
+On Ubuntu (and derivatives) only, enable the Universe repository to obtain all the FFmpeg dependencies:
+
+sudo add-apt-repository universe
+
+NOTE
+If the above command fails you will need to install the following package software-properties-common. This can be achieved with the following command sudo apt-get install software-properties-common
+
+On Debian, you can also enable the non-free components of your base repositories for additional FFmpeg dependencies, but this is optional.
+
+Download the desired jellyfin-server, jellyfin-web, and jellyfin-ffmpeg .deb packages from the repository; jellyfin is a metapackage and is not required.
+
+Install the downloaded .deb packages:
+
+sudo dpkg -i jellyfin_*.deb jellyfin-ffmpeg_*.deb
+
+NOTE
+This step may throw errors; continue to the next step to resolve them.
+
+Use apt to install any missing dependencies:
+
+sudo apt -f install
+
+Manage the Jellyfin system service:
+
+sudo systemctl {action} jellyfin
+sudo service jellyfin {action}
